@@ -55,7 +55,8 @@ namespace cg::renderer
 	{
 		if (in_render_target)
 			render_target = in_render_target;
-		// TODO: Lab 1.06. Adjust set_render_target, and clear_render_target methods of cg::renderer::rasterizer class to consume a depth buffer
+		if (in_depth_buffer)
+			depth_buffer = in_depth_buffer;
 	}
 
 	template<typename VB, typename RT>
@@ -69,7 +70,14 @@ namespace cg::renderer
 				render_target->item(i) = in_clear_value;
 			}
 		}
-		// TODO: Lab 1.06. Adjust set_render_target, and clear_render_target methods of cg::renderer::rasterizer class to consume a depth buffer
+		if(depth_buffer)
+		{
+			for(size_t i = 0; i < depth_buffer->get_number_of_elements(); i++)
+			{
+				depth_buffer->item(i) = in_depth;
+			}
+		}
+
 	}
 
 	template<typename VB, typename RT>
