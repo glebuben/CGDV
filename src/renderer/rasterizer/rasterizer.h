@@ -77,7 +77,6 @@ namespace cg::renderer
 				depth_buffer->item(i) = in_depth;
 			}
 		}
-
 	}
 
 	template<typename VB, typename RT>
