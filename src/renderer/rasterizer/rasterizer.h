@@ -2,6 +2,7 @@
 
 #include "resource.h"
 
+#include <cfloat>
 #include <functional>
 #include <iostream>
 #include <linalg.h>
