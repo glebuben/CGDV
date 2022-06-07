@@ -24,8 +24,7 @@ void cg::renderer::rasterization_renderer::init()
 					settings->camera_position[0],
 					settings->camera_position[1],
 					settings->camera_position[2]
-			}
-			);
+			});
 	camera->set_phi(settings->camera_phi);
 	camera->set_theta(settings->camera_theta);
 	camera->set_angle_of_view(settings->camera_angle_of_view);
@@ -41,7 +40,7 @@ void cg::renderer::rasterization_renderer::init()
 }
 void cg::renderer::rasterization_renderer::render()
 {
-	rasterizer->clear_render_target({111, 15, 112});
+	rasterizer->clear_render_target({255, 0, 0});
 
 	float4x4 matrix = mul(
 			camera->get_projection_matrix(),
@@ -55,8 +54,8 @@ void cg::renderer::rasterization_renderer::render()
 	rasterizer->pixel_shader = [](cg::vertex vertex_data, float z){
 		return cg::color{
 					vertex_data.ambient_r,
-					vertex_data.ambient_b,
-					vertex_data.ambient_g
+					vertex_data.ambient_g,
+					vertex_data.ambient_b
 		};
 	};
 
