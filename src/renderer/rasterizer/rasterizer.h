@@ -150,6 +150,11 @@ namespace cg::renderer
 							static_cast<float>(height - 1))
 			};
 
+			float edge = edge_function(
+					float2{vertices[0].x, vertices[0].y},
+					float2{vertices[1].x, vertices[1].y},
+					float2{vertices[2].x, vertices[2].y});
+
 			for (int x = static_cast<int>(bounding_box_begin.x);
 			x <= static_cast<int>(bounding_box_end.x); x++)
 			{
@@ -171,14 +176,24 @@ namespace cg::renderer
 							point);
 					if (edge0 >= 0.f && edge1 >= 0.f && edge2>= 0.f)
 					{
-						auto pixel_result = pixel_shader(vertices[0], 0.f);
-						render_target->item(x, y) = RT::from_color(pixel_result);
+						float u = edge1 / edge;
+						float v = edge2 / edge;
+						float w =edge0 / edge;
+						float depth = u * vertices[0].z +
+									  v * vertices[1].z +
+									  w * vertices[2].z;
+						if (depth_test(depth, x, y))
+						{
+							auto pixel_result = pixel_shader(vertices[0], 0.f);
+							render_target->item(x, y) = RT::from_color(pixel_result);
+							if (depth_buffer)
+								depth_buffer->item(x,y) = depth;
+						}
 					}
 				}
 			}
 		}
 
-		// TODO: Lab 1.06. Add Depth test stage to draw method of cg::renderer::rasterizer
 		
 	}
 
