@@ -198,6 +198,7 @@ namespace cg::renderer
 	{
 		for (int x = 0; x < width; x++)
 		{
+#pragma omp parallel for
 			for(int y = 0; y < height; y++)
 			{
 				float u = (2.f * x) / static_cast<float>(width - 1) - 1.f;
@@ -245,6 +246,7 @@ namespace cg::renderer
 				}
 			}
 		}
+
 		if(closest_hit_payload.t < max_t)
 		{
 			if (closest_hit_shader)

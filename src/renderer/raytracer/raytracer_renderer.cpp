@@ -41,8 +41,6 @@ void cg::renderer::ray_tracing_renderer::init()
 
 	shadow_raytracer = std::make_shared<cg::renderer::raytracer<
 			cg::vertex, cg::unsigned_color>>();
-	shadow_raytracer->set_vertex_buffers(model->get_vertex_buffers());
-	shadow_raytracer->set_index_buffers(model->get_index_buffers());
 }
 
 void cg::renderer::ray_tracing_renderer::destroy() {}
@@ -51,7 +49,6 @@ void cg::renderer::ray_tracing_renderer::update() {}
 
 void cg::renderer::ray_tracing_renderer::render()
 {
-
 
 	raytracer->clear_render_target({0, 0, 0});
 	raytracer->miss_shader = [](const ray& ray){
@@ -96,7 +93,7 @@ void cg::renderer::ray_tracing_renderer::render()
 	};
 
 	raytracer->build_acceleration_structure();
-	shadow_raytracer->build_acceleration_structure();
+	shadow_raytracer->acceleration_structures = raytracer->acceleration_structures;
 
 	auto start = std::chrono::high_resolution_clock::now();
 	raytracer->ray_generation(
@@ -111,5 +108,4 @@ void cg::renderer::ray_tracing_renderer::render()
 
 	cg::utils::save_resource(*render_target, settings->result_path);
 
-	// TODO: Lab 2.05. Adjust ray_tracing_renderer class to build the acceleration structure
 }
