@@ -61,9 +61,9 @@ namespace cg::renderer
 		ba = b -a;
 		ca = c - a;
 
-		na = float3 {vertex_a.nx, vertex_a.ny. vertex_a.nz};
-		nb = float3 {vertex_b.nx, vertex_b.ny. vertex_b.nz};
-		nc = float3 {vertex_c.nx, vertex_c.ny. vertex_c.nz};
+		na = float3 {vertex_a.nx, vertex_a.ny, vertex_a.nz};
+		nb = float3 {vertex_b.nx, vertex_b.ny, vertex_b.nz};
+		nc = float3 {vertex_c.nx, vertex_c.ny, vertex_c.nz};
 
 		ambient = {vertex_a.ambient_r, vertex_a.ambient_g, vertex_a.ambient_b};
 		diffuse = {vertex_a.diffuse_r, vertex_a.diffuse_g, vertex_a.diffuse_b};
