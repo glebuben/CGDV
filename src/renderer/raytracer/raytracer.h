@@ -126,6 +126,7 @@ namespace cg::renderer
 		std::shared_ptr<cg::resource<float3>> history;
 		std::vector<std::shared_ptr<cg::resource<unsigned int>>> index_buffers;
 		std::vector<std::shared_ptr<cg::resource<VB>>> vertex_buffers;
+		std::vector<triangle<VB>> triangles;
 
 		size_t width = 1920;
 		size_t height = 1080;
@@ -162,6 +163,20 @@ namespace cg::renderer
 	template<typename VB, typename RT>
 	inline void raytracer<VB, RT>::build_acceleration_structure()
 	{
+		for (size_t shape_id = 0; shape_id < index_buffers.size(); shape_id++)
+		{
+			auto& index_buffer = index_buffers[shape_id];
+			auto& vertex_buffer = vertex_buffers[shape_id];
+			size_t index_id = 0;
+			while (index_id < index_buffer->get_number_of_elements())
+			{
+				triangle<VB> triangle(
+						vertex_buffer->item(index_buffer->item(index_id++)),
+						vertex_buffer->item(index_buffer->item(index_id++)),
+						vertex_buffer->item(index_buffer->item(index_id++)));
+				triangles.push_back(triangle);
+			}
+		}
 		// TODO: Lab 2.05. Implement build_acceleration_structure method of raytracer class
 	}
 
