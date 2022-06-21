@@ -142,9 +142,9 @@ void cg::world::model::load_obj(const std::filesystem::path& model_path)
 					}
 					else
 					{
-						vertex.nx = attrib.normals[3 * idx.vertex_index];
-						vertex.ny = attrib.normals[3 * idx.vertex_index + 1];
-						vertex.nz = attrib.normals[3 * idx.vertex_index + 2];
+						vertex.nx = attrib.normals[3 * idx.normal_index];
+						vertex.ny = attrib.normals[3 * idx.normal_index + 1];
+						vertex.nz = attrib.normals[3 * idx.normal_index + 2];
 					}
 
 					if (idx.texcoord_index < 0)
