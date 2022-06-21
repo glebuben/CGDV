@@ -225,8 +225,6 @@ namespace cg::renderer
 				}
 			}
 		}
-		// TODO: Lab 2.06. Add `history` resource in `raytracer` class
-
 	}
 
 	template<typename VB, typename RT>
