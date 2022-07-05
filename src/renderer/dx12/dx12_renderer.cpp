@@ -250,7 +250,6 @@ void cg::renderer::dx12_renderer::create_constant_buffer_view(const ComPtr<ID3D1
 
 void cg::renderer::dx12_renderer::load_assets()
 {
-	// TODO Lab 3.04. Create a descriptor heap for a constant buffer
 	// TODO Lab 3.04. Create a constant buffer view
 
 	vertex_buffers.resize(model->get_vertex_buffers().size());
@@ -302,6 +301,13 @@ void cg::renderer::dx12_renderer::load_assets()
 	THROW_IF_FAILED(
 			constant_buffer->Map(0, &read_range,
 									  reinterpret_cast<void**>(&constant_buffer_data_begin)));
+
+	cbv_srv_heap.create_heap(
+			device,
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			1,
+			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
+			);
 }
 
 
