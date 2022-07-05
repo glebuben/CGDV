@@ -6,7 +6,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <d3d12sdklayers.h>
 #include <filesystem>
 
 
@@ -66,7 +65,15 @@ ComPtr<IDXGIFactory4> cg::renderer::dx12_renderer::get_dxgi_factory()
 
 void cg::renderer::dx12_renderer::initialize_device(ComPtr<IDXGIFactory4>& dxgi_factory)
 {
-	// TODO Lab 3.02. Enumerate hardware adapters
+
+	ComPtr<IDXGIAdapter1> hardware_adapter;
+	dxgi_factory->EnumAdapters1(0, &hardware_adapter);
+#ifdef _DEBUG
+	DXGI_ADAPTER_DESC adapter_desc = {};
+	hardware_adapter->GetDesc(&adapter_desc);
+	OutputDebugString(adapter_desc.Desctiption);
+	OutputDebugString(L"\n");
+#endif
 	// TODO Lab 3.02. Create a device object
 }
 
