@@ -175,7 +175,6 @@ void cg::renderer::dx12_renderer::create_pso(const std::string& shader_name)
 
 void cg::renderer::dx12_renderer::create_resource_on_upload_heap(ComPtr<ID3D12Resource>& resource, UINT size, const std::wstring& name)
 {
-	// TODO Lab 3.03. Implement resource creation on upload heap
 	device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
@@ -195,7 +194,14 @@ void cg::renderer::dx12_renderer::create_resource_on_default_heap(ComPtr<ID3D12R
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource)
 {
-	// TODO Lab 3.03. Map resources and copy suitable data to the resources
+	UINT8* buffer_data_begin;
+	CD3DX12_RANGE read_range(0, 0);
+	THROW_IF_FAILED(
+			destination_resource->Map(0, &read_range,
+							  reinterpret_cast<void**>(&buffer_data_begin)));
+
+	memcpy(buffer_data_begin, buffer_data, buffer_size);
+	destination_resource->Unmap(0, 0);
 }
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, const UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource, ComPtr<ID3D12Resource>& intermediate_resource, D3D12_RESOURCE_STATES state_after, int row_pitch, int slice_pitch)
@@ -267,7 +273,7 @@ void cg::renderer::dx12_renderer::load_assets()
 	// Constant buffer
 	std::wstring const_buffer_name(L"Constant buffer");
 	create_resource_on_upload_heap(constant_buffer,
-								   64*1024,
+								   64 * 1024,
 								   const_buffer_name);
 }
 
