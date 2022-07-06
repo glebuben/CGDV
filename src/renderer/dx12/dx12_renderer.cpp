@@ -55,7 +55,7 @@ void cg::renderer::dx12_renderer::update()
 
 	cb.mwpMatrix = camera->get_dxm_mvp_matrix();
 
-	memcpy(constant_buffer_data_begin, &cb, sizeof(cb))
+	memcpy(constant_buffer_data_begin, &cb, sizeof(cb));
 }
 
 void cg::renderer::dx12_renderer::render()
@@ -546,7 +546,7 @@ void cg::renderer::dx12_renderer::populate_command_list()
 			(root_signature.Get());
 	ID3D12DescriptorHeap* heaps[] = {cbv_srv_heap.get()};
 	command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-	command_list->SetComputeRootDescriptorTable(
+	command_list->SetGraphicsRootDescriptorTable(
 			0, cbv_srv_heap
 					   .get_gpu_descriptor_handle(0));
 	command_list->RSSetViewports(1,
