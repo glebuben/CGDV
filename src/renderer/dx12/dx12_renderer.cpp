@@ -169,6 +169,42 @@ void cg::renderer::dx12_renderer::create_render_target_views()
 
 void cg::renderer::dx12_renderer::create_depth_buffer()
 {
+	CD3DX12_RESOURCE_DESC depth_buffer_desc{
+			D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+			0,
+			settings->width,
+			settings->height,
+			1,
+			1,
+			DXGI_FORMAT_D32_FLOAT,
+			1,
+			0,
+			D3D12_TEXTURE_LAYOUT_UNKNOWN,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+	};
+
+	D3D12_CLEAR_VALUE depth_clear_value{};
+	depth_clear_value.Format = depth_buffer_desc.Format;
+	depth_clear_value.DepthStencil.Depth = 1.f;
+	depth_clear_value.DepthStencil.Stencil = 0;
+
+	THROW_IF_FAILED(device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&depth_buffer_desc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&depth_clear_value,
+			IID_PPV_ARGS(&depth_buffer)
+			))
+	depth_buffer->SetName(L"Depth buffer");
+
+	dsv_heap.create_heap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	device->CreateDepthStencilView(
+			depth_buffer.Get(),
+			nullptr,
+			dsv_heap.get_cpu_descriptor_handle()
+			);
 }
 
 void cg::renderer::dx12_renderer::create_command_allocators()
@@ -200,6 +236,7 @@ void cg::renderer::dx12_renderer::load_pipeline()
 				create_direct_command_queue();
 				create_swap_chain(dxgi_factory);
 				create_render_target_views();
+				create_depth_buffer();
 }
 
 D3D12_STATIC_SAMPLER_DESC cg::renderer::dx12_renderer::get_sampler_descriptor()
@@ -358,13 +395,16 @@ void cg::renderer::dx12_renderer::create_pso(const std::string& shader_name)
 	pso_desc.RasterizerState.FrontCounterClockwise = TRUE;
 	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	pso_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	pso_desc.DepthStencilState.DepthEnable = FALSE;
+	pso_desc.DepthStencilState.DepthEnable = TRUE;
+	pso_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	pso_desc.DepthStencilState.StencilEnable = FALSE;
 	pso_desc.SampleMask = UINT_MAX;
 	pso_desc.PrimitiveTopologyType =
 			D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	pso_desc.NumRenderTargets = 1;
 	pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	pso_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	pso_desc.SampleDesc.Count = 1;
 
 	THROW_IF_FAILED(device->CreateGraphicsPipelineState(
@@ -389,6 +429,21 @@ void cg::renderer::dx12_renderer::create_resource_on_upload_heap(ComPtr<ID3D12Re
 
 void cg::renderer::dx12_renderer::create_resource_on_default_heap(ComPtr<ID3D12Resource>& resource, UINT size, const std::wstring& name, D3D12_RESOURCE_DESC* resource_descriptor)
 {
+	if (resource_descriptor == nullptr)
+	{
+		resource_descriptor = &CD3DX12_RESOURCE_DESC::Buffer(size);
+	}
+	device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			resource_descriptor,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&resource));
+	if(!name.empty())
+	{
+		resource->SetName(name.c_str());
+	}
 }
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource)
@@ -405,6 +460,21 @@ void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, UINT buffer
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, const UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource, ComPtr<ID3D12Resource>& intermediate_resource, D3D12_RESOURCE_STATES state_after, int row_pitch, int slice_pitch)
 {
+	D3D12_SUBRESOURCE_DATA data{};
+	data.pData = buffer_data;
+	data.RowPitch = row_pitch != 0 ? row_pitch : buffer_size;
+	data.SlicePitch = slice_pitch != 0 ? slice_pitch : buffer_size;
+
+	UpdateSubresources(command_list.Get(), destination_resource.Get(),
+					   intermediate_resource.Get(), 0 ,0, 1,
+					   &data);
+	command_list->ResourceBarrier(
+			1,
+			&CD3DX12_RESOURCE_BARRIER::Transition(
+					destination_resource.Get(),
+					D3D12_RESOURCE_STATE_COPY_DEST,
+					state_after)
+			);
 }
 
 D3D12_VERTEX_BUFFER_VIEW cg::renderer::dx12_renderer::create_vertex_buffer_view(const ComPtr<ID3D12Resource>& vertex_buffer, const UINT vertex_buffer_size)
@@ -445,12 +515,13 @@ void cg::renderer::dx12_renderer::load_assets()
 	create_pso("shaders.hlsl");
 	create_command_allocators();
 	create_command_list();
-	command_list->Close();
 
 	vertex_buffers.resize(model->get_vertex_buffers().size());
+	upload_vertex_buffers.resize(model->get_vertex_buffers().size());
 	vertex_buffer_views.resize(model->get_vertex_buffers().size());
 
 	index_buffers.resize(model->get_index_buffers().size());
+	upload_index_buffers.resize(model->get_index_buffers().size());
 	index_buffer_views.resize(model->get_index_buffers().size());
 
 	for(size_t i = 0; i < model->get_index_buffers().size(); i++)
@@ -463,12 +534,16 @@ void cg::renderer::dx12_renderer::load_assets()
 
 		std::wstring vertex_buffer_name(L"Vertex buffer");
 		vertex_buffer_name += std::to_wstring(i);
-		create_resource_on_upload_heap(vertex_buffers[i],
+		create_resource_on_default_heap(vertex_buffers[i],
 									   vertex_buffer_size,
 									   vertex_buffer_name);
+		create_resource_on_upload_heap(upload_vertex_buffers[i],
+									   vertex_buffer_size);
 		copy_data(vertex_buffer_data->get_data(),
 				  vertex_buffer_size,
-				  vertex_buffers[i]);
+				  vertex_buffers[i],
+				  upload_vertex_buffers[i],
+				  D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 		vertex_buffer_views[i] = create_vertex_buffer_view(
 				vertex_buffers[i],
@@ -483,12 +558,16 @@ void cg::renderer::dx12_renderer::load_assets()
 
 		std::wstring index_buffer_name(L"Index buffer");
 		index_buffer_name += std::to_wstring(i);
-		create_resource_on_upload_heap(index_buffers[i],
+		create_resource_on_default_heap(index_buffers[i],
 									   index_buffer_size,
 									   index_buffer_name);
+		create_resource_on_upload_heap(upload_index_buffers[i],
+									   index_buffer_size);
 		copy_data(index_buffer_data->get_data(),
 				  index_buffer_size,
-				  index_buffers[i]);
+				  index_buffers[i],
+				  upload_index_buffers[i],
+				  D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		index_buffer_views[i] = create_index_buffer_view(
 				index_buffers[i],
@@ -517,6 +596,10 @@ void cg::renderer::dx12_renderer::load_assets()
 	create_constant_buffer_view(
 			constant_buffer,
 			cbv_srv_heap.get_cpu_descriptor_handle(0));
+	THROW_IF_FAILED(command_list->Close());
+	ID3D12CommandList* command_lists[] = {command_list.Get()};
+	command_queue->ExecuteCommandLists(
+			_countof(command_lists), command_lists);
 
 	//Create a fence
 	THROW_IF_FAILED(device->CreateFence(
@@ -528,7 +611,7 @@ void cg::renderer::dx12_renderer::load_assets()
 		THROW_IF_FAILED(HRESULT_FROM_WIN32(GetLastError()));
 	}
 
-	//wait_for_gpu();
+	wait_for_gpu();
 }
 
 
@@ -566,7 +649,7 @@ void cg::renderer::dx12_renderer::populate_command_list()
 			1,
 			&rtv_heap.get_cpu_descriptor_handle(frame_index),
 			FALSE,
-			nullptr
+			&dsv_heap.get_cpu_descriptor_handle()
 			);
 	const float clear_color[] = {0.f, 0.f, 0.f, 1.f};
 	command_list->ClearRenderTargetView(
@@ -575,6 +658,10 @@ void cg::renderer::dx12_renderer::populate_command_list()
 			0,
 			nullptr
 			);
+	command_list->ClearDepthStencilView(
+			dsv_heap.get_cpu_descriptor_handle(),
+			D3D12_CLEAR_FLAG_DEPTH,
+			1.0f, 0, 0, nullptr);
 	command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	for (size_t s = 0; s < model->get_vertex_buffers().size(); s++)
